@@ -1,4 +1,4 @@
-#include "include/networking/connection_manager.h"
+#include "include/networking/http_server.h"
 #include <arpa/inet.h>
 #include <cstring>
 #include <stdexcept>
@@ -6,11 +6,11 @@
 #include <unistd.h>
 
 // one worker for listening and distributing work
-ConnectionManager::ConnectionManager(int num_workers) : num_workers_(num_workers - 1) {
+HttpServer::ConnectionManager::ConnectionManager(int num_workers) : num_workers_(num_workers - 1) {
   SetUpWorkerEpoll();
 }
 
-void ConnectionManager::SetUpWorkerEpoll() {
+void HttpServer::ConnectionManager::SetUpWorkerEpoll() {
   for (int i = 0; i < num_workers_; i++) {
     auto epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
@@ -23,7 +23,7 @@ void ConnectionManager::SetUpWorkerEpoll() {
   }
 }
 
-void ConnectionManager::DistributeWork(int socket_fd) {
+void HttpServer::ConnectionManager::DistributeWork(int socket_fd) {
   int accepted_socket_fd{-1};
   sockaddr_in addr;
   socklen_t addr_len;
@@ -46,8 +46,8 @@ void ConnectionManager::DistributeWork(int socket_fd) {
   }
 }
 
-void ConnectionManager::ControlEpollEvent(int epoll_fd, int op, int fd, uint32_t events,
-                                          void *peer_state) {
+void HttpServer::ConnectionManager::ControlEpollEvent(int epoll_fd, int op, int fd, uint32_t events,
+                                                      void *peer_state) {
   if (op == EPOLL_CTL_DEL) {
     if (epoll_ctl(epoll_fd, op, fd, nullptr) < 0) {
       throw std::runtime_error("failed to remove file descriptor");
@@ -64,19 +64,19 @@ void ConnectionManager::ControlEpollEvent(int epoll_fd, int op, int fd, uint32_t
   }
 }
 
-void ConnectionManager::ListenAndProcess(int socket_fd) {
-  controll_thread_ = std::thread(&ConnectionManager::DistributeWork, this, socket_fd);
+void HttpServer::ConnectionManager::ListenAndProcess(int socket_fd) {
+  controll_thread_ = std::thread(&HttpServer::ConnectionManager::DistributeWork, this, socket_fd);
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
-    workers.push_back(std::thread(&ConnectionManager::ProcessEvents, this, worker_idx));
+    workers.push_back(std::thread(&HttpServer::ConnectionManager::ProcessEvents, this, worker_idx));
   }
 }
 
-void ConnectionManager::ProcessEvents(int worker_id) {
+void HttpServer::ConnectionManager::ProcessEvents(int worker_id) {
   auto epoll_fd = worker_epoll_fd_[worker_id];
 
   while (!killed_) {
     auto num_fd = epoll_wait(worker_epoll_fd_[worker_id], worker_events_[worker_id],
-                             ConnectionManager::MAX_EVENTS, 0);
+                             HttpServer::ConnectionManager::MAX_EVENTS, 0);
     if (num_fd <= 0) {
       std::this_thread::sleep_for(std::chrono::microseconds(10));
       continue;
@@ -103,9 +103,9 @@ void ConnectionManager::ProcessEvents(int worker_id) {
     }
   }
 }
-ConnectionManager::~ConnectionManager() {
+HttpServer::ConnectionManager::~ConnectionManager() {
   killed_ = true;
-
+  controll_thread_.join();
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
     workers[worker_idx].join();
     // free all the worker_events resources
@@ -116,7 +116,7 @@ ConnectionManager::~ConnectionManager() {
   }
 }
 
-void ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
+void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
                          //    HandleHttpData(*request, response);
@@ -141,23 +141,23 @@ void ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
   }
 }
 
-void ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerState *state) {
+void HttpServer::ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerState *state) {
   auto bytes_has_sent = send(state->fd, state->buffer + state->sendptr, state->length, 0);
   if (bytes_has_sent >= 0) {
-    if (bytes_has_sent < state->length) { // still bytes remain to send
+    if (bytes_has_sent < state->length) {// still bytes remain to send
       state->sendptr += bytes_has_sent;
       state->length -= bytes_has_sent;
       ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLOUT, state);
-    } else { // all the message has been sent
+    } else {// all the message has been sent
       auto new_state = new PeerState();
       new_state->fd = state->fd;
       ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, new_state->fd, EPOLLIN, new_state);
       delete state;
     }
   } else {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {  // retry
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {// retry
       ControlEpollEvent(epoll_fd, EPOLL_CTL_ADD, state->fd, EPOLLOUT, state);
-    } else {  // other error
+    } else {// other error
       ControlEpollEvent(epoll_fd, EPOLL_CTL_DEL, state->fd, 0, nullptr);
       close(state->fd);
       delete state;
@@ -165,7 +165,7 @@ void ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerState *state) {
   }
 }
 
-ConnectionManager::PeerState::PeerState() {
+HttpServer::PeerState::PeerState() {
   fd = 0;
   sendptr = 0;
   length = 0;
