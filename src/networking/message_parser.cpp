@@ -1,31 +1,35 @@
 
-#include "include/networking/message_parser.h"
+#include "networking/message_parser.h"
+#include "networking/http_server.h"
 #include <sstream>
 
-HttpMessageAbstract::HttpMessageAbstract() {
+auto ToMethod(const std::string &method) -> HttpMethod;
+auto ToVersion(const std::string &version) -> HttpVersion;
+
+AbstractHttpMessage::AbstractHttpMessage() {
 }
 
-const StartLine &HttpMessageAbstract::GetStartLine() const {
+auto AbstractHttpMessage::GetStartLine() const -> const StartLine & {
   return start_line_;
 }
 
-void HttpMessageAbstract::SetStartLine(const StartLine &start_line) {
+void AbstractHttpMessage::SetStartLine(const StartLine &start_line) {
   start_line_ = start_line;
 }
 
-const Header &HttpMessageAbstract::GetHeader() const {
+auto AbstractHttpMessage::GetHeader() const -> const Header & {
   return header_;
 }
 
-void HttpMessageAbstract::SetHeader(const Header &header) {
+void AbstractHttpMessage::SetHeader(const Header &header) {
   header_ = header;
 }
 
-const Body &HttpMessageAbstract::GetBody() const {
+auto AbstractHttpMessage::GetBody() const -> const Body & {
   return body_;
 }
 
-void HttpMessageAbstract::SetBody(const Body &body) {
+void AbstractHttpMessage::SetBody(const Body &body) {
   body_ = body;
 }
 
@@ -42,7 +46,7 @@ HttpRequest::HttpRequest(const std::string &raw) : raw_(raw) {
   // extract the start line
   right_pos = raw_.find("\r\n", left_pos);
   if (right_pos == std::string::npos) {
-    throw std::invalid_argument("start line not found");
+    throw std::logic_error("start line not found");
   }
   auto start_line = raw.substr(left_pos, right_pos);
   auto sl = ExtractStartLine(start_line);
@@ -71,16 +75,12 @@ HttpRequest::HttpRequest(const std::string &raw) : raw_(raw) {
   }
 }
 
-std::string HttpRequest::ToString() {
-  return raw_;
-}
-
 auto HttpRequest::ExtractStartLine(const std::string &line) -> StartLine {
   std::istringstream iss(line);
   std::string method, request_target, version;
   iss >> method >> request_target >> version;
   if (!iss.good() && !iss.eof()) {
-    throw std::invalid_argument("invalid start line format");
+    throw std::logic_error("invalid start line format");
   }
 
   StartLine sl;
@@ -88,7 +88,7 @@ auto HttpRequest::ExtractStartLine(const std::string &line) -> StartLine {
   sl.request_target_ = request_target;
   sl.version_ = ToVersion(version);
   if (sl.version_ != HttpVersion::HTTP_1_1) {
-    throw std::logic_error("HTTP version not supported");
+    throw std::invalid_argument("HTTP version not supported");
   }
 
   return sl;
@@ -117,7 +117,73 @@ auto HttpRequest::ExtractBody(const std::string &body) -> Body {
   return b;
 }
 
-auto MessageParser::ToHttpRequest(const std::string &raw) -> HttpRequest {
+auto HttpRequest::ToString() -> std::string {
+  return raw_;
+}
+
+auto HttpServer::MessageParser::ToHttpRequest(const std::string &raw) -> HttpRequest {
   auto http_request = HttpRequest(raw);
   return http_request;
+}
+
+auto HttpServer::MessageParser::ToPeerState(const HttpResponse &response) -> HttpServer::PeerState * {
+  return new HttpServer::PeerState();
+}
+
+auto ToMethod(const std::string &method) -> HttpMethod {
+  // first to convert to upper case
+  std::string upper_method = method;
+  std::transform(upper_method.begin(), upper_method.end(), upper_method.begin(), ::toupper);
+
+  if (upper_method == "GET") {
+    return HttpMethod::GET;
+  } else if (upper_method == "HEAD") {
+    return HttpMethod::HEAD;
+  } else if (upper_method == "POST") {
+    return HttpMethod::POST;
+  } else if (upper_method == "PUT") {
+    return HttpMethod::PUT;
+  } else if (upper_method == "DELETE") {
+    return HttpMethod::DELETE;
+  } else if (upper_method == "CONNECT") {
+    return HttpMethod::CONNECT;
+  } else if (upper_method == "OPTIONS") {
+    return HttpMethod::OPTIONS;
+  } else if (upper_method == "TRACE") {
+    return HttpMethod::TRACE;
+  } else if (upper_method == "PATCH") {
+    return HttpMethod::PATCH;
+  } else {
+    throw std::invalid_argument("not supported HTTP method");
+  }
+}
+
+auto ToVersion(const std::string &version) -> HttpVersion {
+  // first to convert to upper case
+  std::string upper_version = version;
+  std::transform(upper_version.begin(), upper_version.end(), upper_version.begin(), ::toupper);
+
+  if (upper_version == "HTTP/0.9") {
+    return HttpVersion::HTTP_0_9;
+  } else if (upper_version == "HTTP/1.0") {
+    return HttpVersion::HTTP_1_0;
+  } else if (upper_version == "HTTP/1.1") {
+    return HttpVersion::HTTP_1_1;
+  } else if (upper_version == "HTTP/2" || upper_version == "HTTP/2.0") {
+    return HttpVersion::HTTP_2_0;
+  } else {
+    throw std::invalid_argument("not supported HTTP version");
+  }
+}
+
+auto HttpResponse::ToString() -> std::string {
+  return std::string();
+}
+
+auto HttpResponse::GetStatusCode() const -> HttpStatusCode {
+  return status_code_;
+}
+
+void HttpResponse::SetStatusCode(HttpStatusCode status_code) {
+  status_code_ = status_code;
 }

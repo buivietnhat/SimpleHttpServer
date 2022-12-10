@@ -27,18 +27,17 @@ struct Body {
   std::string content_;
 };
 
-class HttpMessageAbstract {
+class AbstractHttpMessage {
  public:
-  HttpMessageAbstract();
-  virtual ~HttpMessageAbstract() = default;
+  AbstractHttpMessage();
+  virtual ~AbstractHttpMessage() = default;
 
-  const StartLine &GetStartLine() const;
+  auto GetStartLine() const -> const StartLine &;
   void SetStartLine(const StartLine &start_line);
-  const Header &GetHeader() const;
+  auto GetHeader() const -> const Header &;
   void SetHeader(const Header &header);
-  const Body &GetBody() const;
+  auto GetBody() const -> const Body &;
   void SetBody(const Body &body);
-
   virtual auto ToString() -> std::string = 0;
 
  protected:
@@ -47,7 +46,7 @@ class HttpMessageAbstract {
   Body body_;
 };
 
-class HttpRequest : public HttpMessageAbstract {
+class HttpRequest : public AbstractHttpMessage {
  public:
   HttpRequest(const std::string &raw);
   auto ToString() -> std::string override;
@@ -57,63 +56,17 @@ class HttpRequest : public HttpMessageAbstract {
   auto ExtractHeader(const std::string &header) -> Header;
   auto ExtractBody(const std::string &body) -> Body;
 
-  const std::string raw_;
+  std::string raw_;
 };
 
-class HttpResponse : public HttpMessageAbstract {
-};
-
-class MessageParser {
+class HttpResponse : public AbstractHttpMessage {
  public:
-  MessageParser() = default;
-  auto ToHttpRequest(const std::string &raw) -> HttpRequest;
-  auto ToHttpResponse(const std::string &raw) -> HttpResponse;
+  auto GetStatusCode() const -> HttpStatusCode;
+  void SetStatusCode(HttpStatusCode status_code);
+  auto ToString() -> std::string override;
+
+ private:
+  HttpStatusCode status_code_;
 };
-
-inline auto ToMethod(const std::string &method) -> HttpMethod {
-  // first to convert to upper case
-  std::string upper_method = method;
-  std::transform(upper_method.begin(), upper_method.end(), upper_method.begin(), ::toupper);
-
-  if (upper_method == "GET") {
-    return HttpMethod::GET;
-  } else if (upper_method == "HEAD") {
-    return HttpMethod::HEAD;
-  } else if (upper_method == "POST") {
-    return HttpMethod::POST;
-  } else if (upper_method == "PUT") {
-    return HttpMethod::PUT;
-  } else if (upper_method == "DELETE") {
-    return HttpMethod::DELETE;
-  } else if (upper_method == "CONNECT") {
-    return HttpMethod::CONNECT;
-  } else if (upper_method == "OPTIONS") {
-    return HttpMethod::OPTIONS;
-  } else if (upper_method == "TRACE") {
-    return HttpMethod::TRACE;
-  } else if (upper_method == "PATCH") {
-    return HttpMethod::PATCH;
-  } else {
-    throw std::invalid_argument("not supported HTTP method");
-  }
-}
-
-inline auto ToVersion(const std::string &version) -> HttpVersion {
-  // first to convert to upper case
-  std::string upper_version = version;
-  std::transform(upper_version.begin(), upper_version.end(), upper_version.begin(), ::toupper);
-
-  if (upper_version == "HTTP/0.9") {
-    return HttpVersion::HTTP_0_9;
-  } else if (upper_version == "HTTP/1.0") {
-    return HttpVersion::HTTP_1_0;
-  } else if (upper_version == "HTTP/1.1") {
-    return HttpVersion::HTTP_1_1;
-  } else if (upper_version == "HTTP/2" || upper_version == "HTTP/2.0") {
-    return HttpVersion::HTTP_2_0;
-  } else {
-    throw std::invalid_argument("not supported HTTP version");
-  }
-}
 
 #endif//SIMPLEHTTPSERVER_SRC_INCLUDE_NETWORKING_MESSAGE_PARSER_H_

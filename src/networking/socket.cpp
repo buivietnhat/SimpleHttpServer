@@ -1,6 +1,3 @@
-//
-// Created by nhatbui on 09/12/2022.
-//
 
 #include "include/networking/socket.h"
 #include <fcntl.h>

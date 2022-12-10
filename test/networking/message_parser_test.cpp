@@ -1,5 +1,6 @@
 
 #include "gtest/gtest.h"
+#include "networking/http_server.h"
 #include "networking/message_parser.h"
 #include <string>
 
@@ -11,10 +12,12 @@ TEST(MessageParserTest, ExtractHttpRequestTest) {
                             "Accept: */*\r\n"
                             "Connection: keep-alive\r\n\r\n"
                             "Hello";
-  MessageParser mp;
+  HttpServer::MessageParser mp;
   auto http_request = mp.ToHttpRequest(raw_request);
 
   EXPECT_EQ(HttpMethod::GET, http_request.GetStartLine().method_);
+  EXPECT_EQ("/", http_request.GetStartLine().request_target_);
+  EXPECT_EQ(HttpVersion::HTTP_1_1, http_request.GetStartLine().version_);
 
   auto header = http_request.GetHeader();
   EXPECT_TRUE(header.header_.count("Host") == 1);

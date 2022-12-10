@@ -3,7 +3,9 @@
 #define SIMPLEHTTPSERVER_SRC_HTTP_SERVERR_H_
 
 #include <atomic>
+#include <functional>
 #include <memory>
+#include <networking/message_parser.h>
 #include <networking/socket.h>
 #include <sys/epoll.h>
 #include <thread>
@@ -12,6 +14,7 @@
 class HttpServer {
   static constexpr int BUFFER_SIZE = 2048;
 
+ public:
   struct PeerState {
     PeerState();
     int fd;
@@ -20,11 +23,25 @@ class HttpServer {
     int sendptr;
   };
 
+  class MessageParser {
+   public:
+    MessageParser() = default;
+    static auto ToHttpRequest(const std::string &raw) -> HttpRequest;
+    static auto ToPeerState(const HttpResponse &response) -> PeerState *;
+  };
+
+  struct Router {
+    std::unordered_map<std::string, std::function<HttpResponse(void)>> route_;
+    void Register(const std::string &path, std::function<HttpResponse(void)> handler);
+    auto Serve(const std::string &path) -> HttpResponse;
+  };
+
   class ConnectionManager {
     static constexpr int MAX_EVENTS = 10000;
 
    public:
-    explicit ConnectionManager(int num_workers);
+    explicit ConnectionManager(int num_workers, std::unique_ptr<Router> &&router);
+
     void ListenAndProcess(int socket_fd);
     virtual ~ConnectionManager();
 
@@ -36,6 +53,7 @@ class HttpServer {
     std::atomic<bool> killed_{false};
     std::thread controll_thread_;
     std::vector<epoll_event *> worker_events_;
+    std::unique_ptr<Router> router_;
 
     void SetUpWorkerEpoll();
     void DistributeWork(int socket_fd);
@@ -45,7 +63,6 @@ class HttpServer {
     void ProcessEpollOutEvents(int epoll_fd, PeerState *state);
   };
 
- public:
   HttpServer(int num_worker, std::unique_ptr<Socket> &&socket);
   void Start(const std::string &host, int port);
 

@@ -1,17 +1,18 @@
+
 #include "include/networking/http_server.h"
 #include <arpa/inet.h>
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <unistd.h>
-#include <iostream>
 
 using std::cout;
 using std::endl;
 
 // one worker for listening and distributing work
-HttpServer::ConnectionManager::ConnectionManager(int num_workers)
-    : num_workers_(num_workers - 1) {
+HttpServer::ConnectionManager::ConnectionManager(int num_workers, std::unique_ptr<Router> &&router)
+    : num_workers_(num_workers - 1), router_(std::move(router)) {
   SetUpWorkerEpoll();
 }
 
@@ -112,6 +113,7 @@ void HttpServer::ConnectionManager::ProcessEpollEvents(int worker_id) {
     }
   }
 }
+
 HttpServer::ConnectionManager::~ConnectionManager() {
   cout << "Destructor got called" << endl;
   killed_ = true;
@@ -131,9 +133,22 @@ void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
     cout << "Has read " << recived_size << " bytes successfully" << endl;
-    cout << "buffer: \n" << std::string(state->buffer) << endl;
-     //    HandleHttpData(*request, response);
-     //    ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, data->fd, EPOLLOUT, response);
+    cout << "buffer: \n"
+         << std::string(state->buffer) << endl;
+
+    HttpResponse http_response;
+    try {
+      auto http_request = MessageParser::ToHttpRequest(std::string(state->buffer));
+      auto path = http_request.GetStartLine().request_target_;
+      http_response = router_->Serve(path);
+    } catch (const std::invalid_argument &e) {
+      http_response.SetStatusCode(HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED);
+    } catch (const std::logic_error &e) {
+      http_response.SetStatusCode(HttpStatusCode::BAD_REQUEST);
+    }
+
+    auto *peer_state_respone = MessageParser::ToPeerState(http_response);
+    ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLOUT, peer_state_respone);
 
   } else if (recived_size == 0) {// the connection has been closed
     ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, 0, nullptr);
