@@ -3,6 +3,8 @@ project(SimpleHttpServer)
 
 set(CMAKE_CXX_STANDARD 17)
 
+find_package(Threads REQUIRED)
+
 # Includes.
 set(SIMPLEHTTP_SRC_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/src/include)
 set(SIMPLEHTTP_TEST_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/test/include)
@@ -21,5 +23,5 @@ add_dependencies(gtest simplehttp)
 set(MAIN_SOURCES main.cpp)
 add_executable(main ${MAIN_SOURCES})
 
-target_link_libraries(main simplehttp)
+target_link_libraries(main simplehttp Threads::Threads)
 

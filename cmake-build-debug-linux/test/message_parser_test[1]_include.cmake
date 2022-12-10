@@ -1,0 +1,5 @@
+if(EXISTS "/tmp/tmp.vrtMHvKVaH/cmake-build-debug-linux/test/message_parser_test[1]_tests.cmake")
+  include("/tmp/tmp.vrtMHvKVaH/cmake-build-debug-linux/test/message_parser_test[1]_tests.cmake")
+else()
+  add_test(message_parser_test_NOT_BUILT message_parser_test_NOT_BUILT)
+endif()

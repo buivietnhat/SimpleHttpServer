@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/message_parser_test.dir/networking/message_parser_test.cpp.o  -o message_parser_test  ../src/libsimplehttp.a ../lib/libgtest.a ../lib/libgmock_main.a ../lib/libgmock.a ../lib/libgtest.a -lpthread 

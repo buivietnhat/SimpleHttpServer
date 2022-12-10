@@ -4,9 +4,14 @@
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <iostream>
+
+using std::cout;
+using std::endl;
 
 // one worker for listening and distributing work
-HttpServer::ConnectionManager::ConnectionManager(int num_workers) : num_workers_(num_workers - 1) {
+HttpServer::ConnectionManager::ConnectionManager(int num_workers)
+    : num_workers_(num_workers - 1) {
   SetUpWorkerEpoll();
 }
 
@@ -24,6 +29,7 @@ void HttpServer::ConnectionManager::SetUpWorkerEpoll() {
 }
 
 void HttpServer::ConnectionManager::DistributeWork(int socket_fd) {
+  std::cout << "distribute work running" << std::endl;
   int accepted_socket_fd{-1};
   sockaddr_in addr;
   socklen_t addr_len;
@@ -36,6 +42,7 @@ void HttpServer::ConnectionManager::DistributeWork(int socket_fd) {
       continue;
     }
 
+    cout << "new connection has came with fd " << accepted_socket_fd << endl;
     auto peer_state = new PeerState();
     peer_state->fd = accepted_socket_fd;
     ControlEpollEvent(worker_epoll_fd_[current_worker_idx], EPOLL_CTL_ADD, accepted_socket_fd,
@@ -66,12 +73,14 @@ void HttpServer::ConnectionManager::ControlEpollEvent(int epoll_fd, int op, int 
 
 void HttpServer::ConnectionManager::ListenAndProcess(int socket_fd) {
   controll_thread_ = std::thread(&HttpServer::ConnectionManager::DistributeWork, this, socket_fd);
+
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
-    workers.push_back(std::thread(&HttpServer::ConnectionManager::ProcessEvents, this, worker_idx));
+    workers.push_back(std::thread(&HttpServer::ConnectionManager::ProcessEpollEvents, this, worker_idx));
   }
 }
 
-void HttpServer::ConnectionManager::ProcessEvents(int worker_id) {
+void HttpServer::ConnectionManager::ProcessEpollEvents(int worker_id) {
+  std::cout << "ProcessEpollEvents running for worker id " << worker_id << std::endl;
   auto epoll_fd = worker_epoll_fd_[worker_id];
 
   while (!killed_) {
@@ -104,6 +113,7 @@ void HttpServer::ConnectionManager::ProcessEvents(int worker_id) {
   }
 }
 HttpServer::ConnectionManager::~ConnectionManager() {
+  cout << "Destructor got called" << endl;
   killed_ = true;
   controll_thread_.join();
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
@@ -117,10 +127,13 @@ HttpServer::ConnectionManager::~ConnectionManager() {
 }
 
 void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
+  cout << "Processing pollin event " << endl;
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
-                         //    HandleHttpData(*request, response);
-                         //    ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, data->fd, EPOLLOUT, response);
+    cout << "Has read " << recived_size << " bytes successfully" << endl;
+    cout << "buffer: \n" << std::string(state->buffer) << endl;
+     //    HandleHttpData(*request, response);
+     //    ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, data->fd, EPOLLOUT, response);
 
   } else if (recived_size == 0) {// the connection has been closed
     ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, 0, nullptr);

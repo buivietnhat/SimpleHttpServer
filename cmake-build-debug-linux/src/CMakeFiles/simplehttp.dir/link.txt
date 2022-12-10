@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsimplehttp.a  networking/CMakeFiles/simplehttp_networking.dir/socket.cpp.o networking/CMakeFiles/simplehttp_networking.dir/http_server.cpp.o networking/CMakeFiles/simplehttp_networking.dir/connection_manager.cpp.o networking/CMakeFiles/simplehttp_networking.dir/message_parser.cpp.o
+/usr/bin/ranlib libsimplehttp.a

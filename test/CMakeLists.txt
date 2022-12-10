@@ -13,7 +13,7 @@ foreach (simplehttp_test_source ${SIMPLEHTTP_TEST_SOURCES})
     string(REPLACE ".cpp" "" simplehttp_test_name ${simplehttp_test_filename})
 
     # Add the test target separately and as part of "make check-tests".
-    add_executable(${simplehttp_test_name} EXCLUDE_FROM_ALL ${simplehttp_test_source})
+    add_executable(${simplehttp_test_name} EXCLUDE_FROM_ALL ${simplehttp_test_source} networking/message_parser_test.cpp)
     add_dependencies(build-tests ${simplehttp_test_name})
     add_dependencies(check-tests ${simplehttp_test_name})
 

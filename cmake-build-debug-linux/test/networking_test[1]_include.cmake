@@ -1,0 +1,5 @@
+if(EXISTS "/tmp/tmp.vrtMHvKVaH/cmake-build-debug-linux/test/networking_test[1]_tests.cmake")
+  include("/tmp/tmp.vrtMHvKVaH/cmake-build-debug-linux/test/networking_test[1]_tests.cmake")
+else()
+  add_test(networking_test_NOT_BUILT networking_test_NOT_BUILT)
+endif()

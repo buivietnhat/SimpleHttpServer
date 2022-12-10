@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../src/include/networking/http_server.h
+atomic
+-
+memory
+-
+networking/socket.h
+-
+sys/epoll.h
+-
+thread
+-
+vector
+-
+
+../src/include/networking/socket.h
+string
+-
+
+/tmp/tmp.vrtMHvKVaH/main.cpp
+iostream
+-
+memory
+-
+networking/http_server.h
+-
+

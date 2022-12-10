@@ -15,7 +15,7 @@ class HttpServer {
   struct PeerState {
     PeerState();
     int fd;
-    uint8_t buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
     int length;
     int sendptr;
   };
@@ -39,15 +39,14 @@ class HttpServer {
 
     void SetUpWorkerEpoll();
     void DistributeWork(int socket_fd);
-    void ControlEpollEvent(int epoll_fd, int op, int fd, uint32_t events,
-                           void *data);
-    void ProcessEvents(int worker_id);
+    void ControlEpollEvent(int epoll_fd, int op, int fd, uint32_t events, void *data);
+    void ProcessEpollEvents(int worker_id);
     void ProcessEpollInEvents(int epoll_fd, PeerState *state);
     void ProcessEpollOutEvents(int epoll_fd, PeerState *state);
   };
 
  public:
-  HttpServer(std::unique_ptr<Socket> &&socket);
+  HttpServer(int num_worker, std::unique_ptr<Socket> &&socket);
   void Start(const std::string &host, int port);
 
  private:
