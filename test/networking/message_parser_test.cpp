@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include <string>
 
-TEST(MessageParserTest, ExtractHttpRequestTest_DISABLED) {
+TEST(MessageParserTest, ExtractHttpRequestTest) {
   std::string raw_request = "GET / HTTP/1.1\r\n"
                             "Host: 0.0.0.0:8080\r\n"
                             "User-Agent: python-requests/2.22.0\r\n"
