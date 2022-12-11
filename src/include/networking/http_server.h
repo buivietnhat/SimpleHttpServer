@@ -14,6 +14,7 @@
 class HttpServer {
   static constexpr size_t BUFFER_SIZE = 4096;
 
+ public:
   struct PeerState {
     PeerState();
     int fd;
@@ -62,7 +63,6 @@ class HttpServer {
     void ProcessEpollOutEvents(int epoll_fd, PeerState *state);
   };
 
- public:
   HttpServer(int num_worker, std::unique_ptr<Socket> &&socket);
   void Start(const std::string &host, int port);
   void Register(const std::string &path, HttpMethod method, std::function<HttpResponse(void)> handler);

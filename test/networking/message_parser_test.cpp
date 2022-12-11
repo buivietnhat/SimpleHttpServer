@@ -62,11 +62,11 @@ TEST(MessageParserTest, HttpResponseToString) {
                           .SetContent("Hello")
                           .Build();
 
-  std::string expected_string_with_content = "HTTP/1.1 OK 200\r\n"
+  std::string expected_string_with_content = "HTTP/1.1 200 OK\r\n"
                                              "Content-Length: 5\r\n"
                                              "Content-Type: text/plain\r\n\r\n"
                                              "Hello";
-  std::string expected_string_no_content = "HTTP/1.1 OK 200\r\n"
+  std::string expected_string_no_content = "HTTP/1.1 200 OK\r\n"
                                              "Content-Length: 5\r\n"
                                              "Content-Type: text/plain\r\n\r\n";
 
