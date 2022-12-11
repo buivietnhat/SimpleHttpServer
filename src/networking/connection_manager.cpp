@@ -30,7 +30,6 @@ void HttpServer::ConnectionManager::SetUpWorkerEpoll() {
 }
 
 void HttpServer::ConnectionManager::DistributeWork(int socket_fd) {
-  std::cout << "distribute work running" << std::endl;
   int accepted_socket_fd{-1};
   sockaddr_in addr;
   socklen_t addr_len;
@@ -43,7 +42,6 @@ void HttpServer::ConnectionManager::DistributeWork(int socket_fd) {
       continue;
     }
 
-    cout << "new connection has came with fd " << accepted_socket_fd << endl;
     auto peer_state = new PeerState();
     peer_state->fd = accepted_socket_fd;
     ControlEpollEvent(worker_epoll_fd_[current_worker_idx], EPOLL_CTL_ADD, accepted_socket_fd,
@@ -82,7 +80,6 @@ void HttpServer::ConnectionManager::ListenAndProcess(int socket_fd) {
 }
 
 void HttpServer::ConnectionManager::ProcessEpollEvents(int worker_id) {
-  std::cout << "ProcessEpollEvents running for worker id " << worker_id << std::endl;
   auto epoll_fd = worker_epoll_fd_[worker_id];
 
   while (!killed_) {
@@ -183,7 +180,9 @@ void HttpServer::ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerStat
       state->length -= bytes_has_sent;
       ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLOUT, state);
     } else {// all the message has been sent
-      close(state->fd);
+      auto *new_state = new PeerState();
+      new_state->fd = state->fd;
+      ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLIN, new_state);
       delete state;
     }
   } else {
