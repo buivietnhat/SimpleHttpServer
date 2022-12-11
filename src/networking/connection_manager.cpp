@@ -75,7 +75,7 @@ void HttpServer::ConnectionManager::ListenAndProcess(int socket_fd) {
   controll_thread_ = std::thread(&HttpServer::ConnectionManager::DistributeWork, this, socket_fd);
 
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
-    workers.push_back(std::thread(&HttpServer::ConnectionManager::ProcessEpollEvents, this, worker_idx));
+    workers_.push_back(std::thread(&HttpServer::ConnectionManager::ProcessEpollEvents, this, worker_idx));
   }
 }
 
@@ -119,14 +119,14 @@ HttpServer::ConnectionManager::~ConnectionManager() {
 
   controll_thread_.join();
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
-    workers[worker_idx].join();
+    workers_[worker_idx].join();
   }
 
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
     // free all the worker_events resources
     delete[] worker_events_[worker_idx];
 
-    // close workers file descritor
+    // close workers_ file descritor
     close(worker_epoll_fd_[worker_idx]);
   }
 }

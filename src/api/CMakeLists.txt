@@ -1,7 +1,7 @@
 add_library(
         simplehttp_api
         OBJECT
-        root.cpp
+        greeting.cpp
        )
 
 set(ALL_OBJECT_FILES

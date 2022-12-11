@@ -1,7 +1,7 @@
+#include "api/greeting.h"
 #include <iostream>
 #include <memory>
 #include <networking/http_server.h>
-#include "api/root.h"
 
 int main() {
   {

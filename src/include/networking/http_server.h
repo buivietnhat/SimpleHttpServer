@@ -48,7 +48,7 @@ class HttpServer {
    private:
     int num_workers_;
     int current_worker_idx{0};
-    std::vector<std::thread> workers;
+    std::vector<std::thread> workers_;
     std::vector<int> worker_epoll_fd_;
     std::atomic<bool> killed_{false};
     std::thread controll_thread_;

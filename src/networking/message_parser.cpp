@@ -169,26 +169,26 @@ void HttpResponse::SetStatusCode(HttpStatusCode status_code) {
 }
 
 auto HttpResponseBuilder::SetStatusCode(HttpStatusCode code) -> HttpResponseBuilder & {
-  root.SetStatusCode(code);
+  root_.SetStatusCode(code);
   return *this;
 }
 
 auto HttpResponseBuilder::SetHttpVersion(HttpVersion version) -> HttpResponseBuilder & {
-  root.start_line_.version_ = version;
+  root_.start_line_.version_ = version;
   return *this;
 }
 
 auto HttpResponseBuilder::AddHeaderKeyValue(const std::string &key, const std::string &value) -> HttpResponseBuilder & {
-  root.header_.header_[key] = value;
+  root_.header_.header_[key] = value;
   return *this;
 }
 
 auto HttpResponseBuilder::SetContent(const std::string &content) -> HttpResponseBuilder & {
-  root.body_.content_ = content;
-  root.header_.SetContentLength(content.size());
+  root_.body_.content_ = content;
+  root_.header_.SetContentLength(content.size());
   return *this;
 }
 
 auto HttpResponseBuilder::Build() -> HttpResponse {
-  return std::move(root);
+  return std::move(root_);
 }

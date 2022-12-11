@@ -1,4 +1,4 @@
-#include "api/root.h"
+#include "api/greeting.h"
 
 auto Greeting() -> HttpResponse {
   HttpResponseBuilder builder;

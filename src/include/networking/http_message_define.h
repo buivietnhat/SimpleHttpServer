@@ -125,7 +125,7 @@ class HttpResponseBuilder {
   auto Build() -> HttpResponse;
 
  private:
-  HttpResponse root;
+  HttpResponse root_;
 };
 
 #endif//SIMPLEHTTPSERVER_SRC_INCLUDE_NETWORKING_HTTP_MESSAGE_DEFINE_H_
