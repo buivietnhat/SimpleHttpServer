@@ -1,9 +1,9 @@
 
 #include "networking/http_message_define.h"
 #include "networking/http_server.h"
-#include <sstream>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 AbstractHttpMessage::AbstractHttpMessage() {
 }
@@ -133,10 +133,6 @@ auto HttpServer::MessageParser::ToPeerState(int fd, const HttpResponse &response
   auto peer_state = new PeerState();
   peer_state->fd = fd;
   auto response_string = response.ToString(content_included);
-//  std::string response_string = "HTTP/1.1 200 OK\r\n"
-//                                "Content-Length: 13\r\n"
-//                                "Content-Type: text/plain\r\n\r\n"
-//                                "Hello, world\n";
   memcpy(peer_state->buffer, response_string.c_str(), BUFFER_SIZE);
   peer_state->length = response_string.size();
   return peer_state;

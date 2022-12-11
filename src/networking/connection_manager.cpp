@@ -115,11 +115,14 @@ void HttpServer::ConnectionManager::ProcessEpollEvents(int worker_id) {
 }
 
 HttpServer::ConnectionManager::~ConnectionManager() {
-  cout << "Destructor got called" << endl;
   killed_ = true;
+
   controll_thread_.join();
   for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
     workers[worker_idx].join();
+  }
+
+  for (int worker_idx = 0; worker_idx < num_workers_; worker_idx++) {
     // free all the worker_events resources
     delete[] worker_events_[worker_idx];
 
