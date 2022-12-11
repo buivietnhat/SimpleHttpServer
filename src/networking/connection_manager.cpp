@@ -132,13 +132,8 @@ HttpServer::ConnectionManager::~ConnectionManager() {
 }
 
 void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
-//  cout << "Processing pollin event " << endl;
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
-//    cout << "Has read " << recived_size << " bytes successfully" << endl;
-//    cout << "buffer: \n"
-//         << std::string(state->buffer) << endl;
-
     HttpResponse http_response;
     bool content_included =  true;
 
@@ -181,11 +176,7 @@ void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState
 }
 
 void HttpServer::ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerState *state) {
-  cout << "Processing pollout event " << endl;
   auto bytes_has_sent = send(state->fd, &state->buffer[state->sendptr], state->length, 0);
-
-  ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLIN, state);
-
   if (bytes_has_sent >= 0) {
     if (bytes_has_sent < state->length) {// still bytes remain to send
       state->sendptr += bytes_has_sent;
