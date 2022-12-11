@@ -1,7 +1,8 @@
 
 add_subdirectory(networking)
+add_subdirectory(api)
 
-add_library(simplehttp STATIC ${ALL_OBJECT_FILES} include/networking/logger.h include/networking/http_message_define.h)
+add_library(simplehttp STATIC ${ALL_OBJECT_FILES} include/networking/logger.h include/networking/http_message_define.h include/api/root.h)
 
 set(SIMPLEHTTP_LIBS
         simplehttp_networking

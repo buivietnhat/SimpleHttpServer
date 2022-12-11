@@ -2,38 +2,37 @@
 #ifndef SIMPLEHTTPSERVER_SRC_HTTP_SERVERR_H_
 #define SIMPLEHTTPSERVER_SRC_HTTP_SERVERR_H_
 
+#include "networking/http_message_define.h"
+#include "networking/socket.h"
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <networking/message_parser.h>
-#include <networking/socket.h>
 #include <sys/epoll.h>
 #include <thread>
 #include <vector>
 
 class HttpServer {
-  static constexpr int BUFFER_SIZE = 2048;
+  static constexpr size_t BUFFER_SIZE = 4096;
 
- public:
   struct PeerState {
     PeerState();
     int fd;
+    size_t length;
+    size_t sendptr;
     char buffer[BUFFER_SIZE];
-    int length;
-    int sendptr;
   };
 
   class MessageParser {
    public:
     MessageParser() = default;
     static auto ToHttpRequest(const std::string &raw) -> HttpRequest;
-    static auto ToPeerState(const HttpResponse &response) -> PeerState *;
+    static auto ToPeerState(int fd, const HttpResponse &response, bool content_included) -> PeerState *;
   };
 
   struct Router {
-    std::unordered_map<std::string, std::function<HttpResponse(void)>> route_;
-    void Register(const std::string &path, std::function<HttpResponse(void)> handler);
-    auto Serve(const std::string &path) -> HttpResponse;
+    std::unordered_map<std::string, std::unordered_map<HttpMethod, std::function<HttpResponse(void)>>> route_;
+    void Register(const std::string &path, HttpMethod method, std::function<HttpResponse(void)> handler);
+    auto Serve(const std::string &path, const HttpRequest &request) -> HttpResponse;
   };
 
   class ConnectionManager {
@@ -41,7 +40,7 @@ class HttpServer {
 
    public:
     explicit ConnectionManager(int num_workers, std::unique_ptr<Router> &&router);
-
+    void Register(const std::string &path, HttpMethod method, std::function<HttpResponse(void)> handler);
     void ListenAndProcess(int socket_fd);
     virtual ~ConnectionManager();
 
@@ -63,8 +62,10 @@ class HttpServer {
     void ProcessEpollOutEvents(int epoll_fd, PeerState *state);
   };
 
+ public:
   HttpServer(int num_worker, std::unique_ptr<Socket> &&socket);
   void Start(const std::string &host, int port);
+  void Register(const std::string &path, HttpMethod method, std::function<HttpResponse(void)> handler);
 
  private:
   std::unique_ptr<Socket> socket_;

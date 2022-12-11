@@ -1,10 +1,8 @@
 
-#include "networking/message_parser.h"
+#include "networking/http_message_define.h"
 #include "networking/http_server.h"
 #include <sstream>
-
-auto ToMethod(const std::string &method) -> HttpMethod;
-auto ToVersion(const std::string &version) -> HttpVersion;
+#include <cstring>
 
 AbstractHttpMessage::AbstractHttpMessage() {
 }
@@ -117,8 +115,11 @@ auto HttpRequest::ExtractBody(const std::string &body) -> Body {
   return b;
 }
 
-auto HttpRequest::ToString() -> std::string {
-  return raw_;
+auto HttpRequest::ToString(bool content_included) const -> std::string {
+  if (content_included) {
+    return raw_;
+  }
+  throw std::logic_error("function not yet implemented");
 }
 
 auto HttpServer::MessageParser::ToHttpRequest(const std::string &raw) -> HttpRequest {
@@ -126,58 +127,36 @@ auto HttpServer::MessageParser::ToHttpRequest(const std::string &raw) -> HttpReq
   return http_request;
 }
 
-auto HttpServer::MessageParser::ToPeerState(const HttpResponse &response) -> HttpServer::PeerState * {
-  return new HttpServer::PeerState();
+auto HttpServer::MessageParser::ToPeerState(int fd, const HttpResponse &response,
+                                            bool content_included) -> HttpServer::PeerState * {
+  auto peer_state = new PeerState();
+  peer_state->fd = fd;
+  auto response_string = response.ToString(content_included);
+  memcpy(peer_state->buffer, response_string.c_str(), BUFFER_SIZE);
+  peer_state->length = response_string.size();
+  return peer_state;
 }
 
-auto ToMethod(const std::string &method) -> HttpMethod {
-  // first to convert to upper case
-  std::string upper_method = method;
-  std::transform(upper_method.begin(), upper_method.end(), upper_method.begin(), ::toupper);
+auto HttpResponse::ToString(bool content_included) const -> std::string {
+  // Start Line
+  std::ostringstream oss;
 
-  if (upper_method == "GET") {
-    return HttpMethod::GET;
-  } else if (upper_method == "HEAD") {
-    return HttpMethod::HEAD;
-  } else if (upper_method == "POST") {
-    return HttpMethod::POST;
-  } else if (upper_method == "PUT") {
-    return HttpMethod::PUT;
-  } else if (upper_method == "DELETE") {
-    return HttpMethod::DELETE;
-  } else if (upper_method == "CONNECT") {
-    return HttpMethod::CONNECT;
-  } else if (upper_method == "OPTIONS") {
-    return HttpMethod::OPTIONS;
-  } else if (upper_method == "TRACE") {
-    return HttpMethod::TRACE;
-  } else if (upper_method == "PATCH") {
-    return HttpMethod::PATCH;
-  } else {
-    throw std::invalid_argument("not supported HTTP method");
+  oss << ::ToString(start_line_.version_) << " ";
+  oss << static_cast<int>(status_code_) << "\r\n";
+  oss << ::ToString(status_code_) << " ";
+
+  // Header
+  for (const auto &[key, value] : header_.header_) {
+    oss << key << ": " << value << "\r\n";
   }
-}
+  oss << "\r\n";
 
-auto ToVersion(const std::string &version) -> HttpVersion {
-  // first to convert to upper case
-  std::string upper_version = version;
-  std::transform(upper_version.begin(), upper_version.end(), upper_version.begin(), ::toupper);
-
-  if (upper_version == "HTTP/0.9") {
-    return HttpVersion::HTTP_0_9;
-  } else if (upper_version == "HTTP/1.0") {
-    return HttpVersion::HTTP_1_0;
-  } else if (upper_version == "HTTP/1.1") {
-    return HttpVersion::HTTP_1_1;
-  } else if (upper_version == "HTTP/2" || upper_version == "HTTP/2.0") {
-    return HttpVersion::HTTP_2_0;
-  } else {
-    throw std::invalid_argument("not supported HTTP version");
+  // Body
+  if (content_included) {
+    oss << body_.content_;
   }
-}
 
-auto HttpResponse::ToString() -> std::string {
-  return std::string();
+  return oss.str();
 }
 
 auto HttpResponse::GetStatusCode() const -> HttpStatusCode {
@@ -186,4 +165,29 @@ auto HttpResponse::GetStatusCode() const -> HttpStatusCode {
 
 void HttpResponse::SetStatusCode(HttpStatusCode status_code) {
   status_code_ = status_code;
+}
+
+auto HttpResponseBuilder::SetStatusCode(HttpStatusCode code) -> HttpResponseBuilder & {
+  root.SetStatusCode(code);
+  return *this;
+}
+
+auto HttpResponseBuilder::SetHttpVersion(HttpVersion version) -> HttpResponseBuilder & {
+  root.start_line_.version_ = version;
+  return *this;
+}
+
+auto HttpResponseBuilder::AddHeaderKeyValue(const std::string &key, const std::string &value) -> HttpResponseBuilder & {
+  root.header_.header_[key] = value;
+  return *this;
+}
+
+auto HttpResponseBuilder::SetContent(const std::string &content) -> HttpResponseBuilder & {
+  root.body_.content_ = content;
+  root.header_.SetContentLength(content.size());
+  return *this;
+}
+
+auto HttpResponseBuilder::Build() -> HttpResponse {
+  return std::move(root);
 }

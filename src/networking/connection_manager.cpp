@@ -67,7 +67,8 @@ void HttpServer::ConnectionManager::ControlEpollEvent(int epoll_fd, int op, int 
   ev.events = events;
   ev.data.ptr = peer_state;
 
-  if (epoll_ctl(epoll_fd, op, fd, &ev) < 0) {
+  auto res = epoll_ctl(epoll_fd, op, fd, &ev);
+  if (res < 0) {
     throw std::runtime_error("failed to add file descriptor");
   }
 }
@@ -94,18 +95,20 @@ void HttpServer::ConnectionManager::ProcessEpollEvents(int worker_id) {
 
     for (int i = 0; i < num_fd; i++) {
       const auto &event = worker_events_[worker_id][i];
-      auto *peer_state = static_cast<PeerState *>(event.data.ptr);
-      if (event.events == EPOLLIN) {
+      auto *peer_state = reinterpret_cast<PeerState *>(event.data.ptr);
+
+      if ((event.events & EPOLLIN)) {
         ProcessEpollInEvents(epoll_fd, peer_state);
         continue;
       }
 
-      if (event.events == EPOLLOUT) {
+      if ((event.events & EPOLLOUT)) {
+        ProcessEpollOutEvents(epoll_fd, peer_state);
         continue;
       }
 
       // something went wrong
-      ControlEpollEvent(epoll_fd, EPOLL_CTL_DEL, event.data.fd, 0, nullptr);
+      ControlEpollEvent(epoll_fd, EPOLL_CTL_DEL, peer_state->fd, 0, nullptr);
       close(peer_state->fd);
       if (peer_state) {
         delete peer_state;
@@ -129,29 +132,37 @@ HttpServer::ConnectionManager::~ConnectionManager() {
 }
 
 void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState *state) {
-  cout << "Processing pollin event " << endl;
+//  cout << "Processing pollin event " << endl;
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
-    cout << "Has read " << recived_size << " bytes successfully" << endl;
-    cout << "buffer: \n"
-         << std::string(state->buffer) << endl;
+//    cout << "Has read " << recived_size << " bytes successfully" << endl;
+//    cout << "buffer: \n"
+//         << std::string(state->buffer) << endl;
 
     HttpResponse http_response;
+    bool content_included =  true;
+
     try {
       auto http_request = MessageParser::ToHttpRequest(std::string(state->buffer));
+      if (http_request.GetStartLine().method_ == HttpMethod::HEAD) {
+        content_included = false;
+      }
       auto path = http_request.GetStartLine().request_target_;
-      http_response = router_->Serve(path);
+      http_response = router_->Serve(path, http_request);
     } catch (const std::invalid_argument &e) {
       http_response.SetStatusCode(HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED);
     } catch (const std::logic_error &e) {
       http_response.SetStatusCode(HttpStatusCode::BAD_REQUEST);
+    } catch(const std::exception &e) {
+      http_response.SetStatusCode(HttpStatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    auto *peer_state_respone = MessageParser::ToPeerState(http_response);
+    auto *peer_state_respone = MessageParser::ToPeerState(state->fd, http_response, content_included);
     ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLOUT, peer_state_respone);
+    delete state;
 
   } else if (recived_size == 0) {// the connection has been closed
-    ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, 0, nullptr);
+    ControlEpollEvent(epoll_fd, EPOLL_CTL_DEL, state->fd, 0, nullptr);
     close(state->fd);
     if (state) {
       delete state;
@@ -170,16 +181,18 @@ void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState
 }
 
 void HttpServer::ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerState *state) {
-  auto bytes_has_sent = send(state->fd, state->buffer + state->sendptr, state->length, 0);
+  cout << "Processing pollout event " << endl;
+  auto bytes_has_sent = send(state->fd, &state->buffer[state->sendptr], state->length, 0);
+
+  ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLIN, state);
+
   if (bytes_has_sent >= 0) {
     if (bytes_has_sent < state->length) {// still bytes remain to send
       state->sendptr += bytes_has_sent;
       state->length -= bytes_has_sent;
       ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, state->fd, EPOLLOUT, state);
     } else {// all the message has been sent
-      auto new_state = new PeerState();
-      new_state->fd = state->fd;
-      ControlEpollEvent(epoll_fd, EPOLL_CTL_MOD, new_state->fd, EPOLLIN, new_state);
+      close(state->fd);
       delete state;
     }
   } else {
@@ -193,9 +206,14 @@ void HttpServer::ConnectionManager::ProcessEpollOutEvents(int epoll_fd, PeerStat
   }
 }
 
+void HttpServer::ConnectionManager::Register(const std::string &path, HttpMethod method,
+                                             std::function<HttpResponse(void)> handler) {
+  router_->Register(path, method, handler);
+}
+
 HttpServer::PeerState::PeerState() {
   fd = 0;
   sendptr = 0;
   length = 0;
-  memset(buffer, 0, sizeof(buffer));
+  memset(buffer, 0, BUFFER_SIZE);
 }

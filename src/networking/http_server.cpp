@@ -13,17 +13,26 @@ void HttpServer::Start(const std::string &host, int port) {
   socket_->Start(host, port);
   cm_->ListenAndProcess(socket_->GetFd());
 }
-
-void HttpServer::Router::Register(const std::string &path, std::function<HttpResponse(void)> handler) {
-  route_[path] = handler;
+void HttpServer::Register(const std::string &path, HttpMethod method,
+                          std::function<HttpResponse(void)> handler) {
+  cm_->Register(path, method, handler);
 }
 
-auto HttpServer::Router::Serve(const std::string &path) -> HttpResponse {
+void HttpServer::Router::Register(const std::string &path, HttpMethod method,
+                                  std::function<HttpResponse(void)> handler) {
+  route_[path][method] = handler;
+}
+
+auto HttpServer::Router::Serve(const std::string &path, const HttpRequest &request) -> HttpResponse {
   if (route_.count(path) == 0) {
     throw std::logic_error("not supported path's handler");
   }
+  auto request_method = request.GetStartLine().method_;
+  if (route_[path].count(request_method) == 0) {
+    throw std::logic_error("not supported method handler");
+  }
 
-  auto handler = route_[path];
+  auto handler = route_[path][request_method];
   auto respone = handler();
   return respone;
 }

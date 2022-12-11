@@ -16,7 +16,7 @@ class Socket {
   virtual ~Socket();
 
  private:
-  int fd_server_;
+  int fd_server_{0};
 
   void SetUp();
   void Bind(const std::string &host, int port);

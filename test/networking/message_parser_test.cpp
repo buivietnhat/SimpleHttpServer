@@ -1,10 +1,10 @@
 
-#include "gtest/gtest.h"
 #include "networking/http_server.h"
-#include "networking/message_parser.h"
+#include "networking/http_message_define.h"
+#include "gtest/gtest.h"
 #include <string>
 
-TEST(MessageParserTest, ExtractHttpRequestTest) {
+TEST(MessageParserTest, ExtractHttpRequestTest_DISABLED) {
   std::string raw_request = "GET / HTTP/1.1\r\n"
                             "Host: 0.0.0.0:8080\r\n"
                             "User-Agent: python-requests/2.22.0\r\n"
@@ -34,4 +34,45 @@ TEST(MessageParserTest, ExtractHttpRequestTest) {
 
   auto body = http_request.GetBody();
   EXPECT_EQ("Hello", body.content_);
+}
+
+TEST(MessageParserTest, HttpResponseBuilderTest) {
+  HttpResponseBuilder builder;
+  auto http_respone = builder.SetStatusCode(HttpStatusCode::OK)
+                          .SetHttpVersion(HttpVersion::HTTP_1_1)
+                          .AddHeaderKeyValue("Content-Type", "text/plain")
+                          .SetContent("Hello")
+                          .Build();
+  EXPECT_EQ(HttpStatusCode::OK, http_respone.GetStatusCode());
+  EXPECT_EQ(HttpVersion::HTTP_1_1, http_respone.GetStartLine().version_);
+
+  auto header = http_respone.GetHeader();
+  EXPECT_TRUE(header.header_.count("Content-Type") == 1);
+  EXPECT_EQ("text/plain", header.header_["Content-Type"]);
+
+  auto body = http_respone.GetBody();
+  EXPECT_EQ("Hello", body.content_);
+}
+
+TEST(MessageParserTest, HttpResponseToString) {
+  HttpResponseBuilder builder;
+  auto http_respone = builder.SetStatusCode(HttpStatusCode::OK)
+                          .SetHttpVersion(HttpVersion::HTTP_1_1)
+                          .AddHeaderKeyValue("Content-Type", "text/plain")
+                          .SetContent("Hello")
+                          .Build();
+
+  std::string expected_string_with_content = "HTTP/1.1 OK 200\r\n"
+                                             "Content-Length: 5\r\n"
+                                             "Content-Type: text/plain\r\n\r\n"
+                                             "Hello";
+  std::string expected_string_no_content = "HTTP/1.1 OK 200\r\n"
+                                             "Content-Length: 5\r\n"
+                                             "Content-Type: text/plain\r\n\r\n";
+
+  auto string_response_with_content = http_respone.ToString(true);
+  auto string_response_no_content = http_respone.ToString(false);
+
+  EXPECT_EQ(expected_string_with_content, string_response_with_content);
+  EXPECT_EQ(expected_string_no_content, string_response_no_content);
 }
