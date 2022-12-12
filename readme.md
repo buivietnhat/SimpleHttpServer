@@ -2,6 +2,7 @@
 
 ### 1. Build and Run
 * Compilier: GNU gcc version 9.4.0
+* cmake: version 3.19.6
 #### 1.1. How to build
 ```angular2html
     mkdir build && cd build
@@ -38,7 +39,13 @@ for building all
 will execute all the tests
 
 ### 2. Current supported Http operations:
-
+For now the system only supports the simple http request with request target is an url as an absolute path, and also only supports HTTP/1.1 version, for example:
+```angular2html
+GET / HTTP/1.1
+POST / HTTP/1.1
+GET /index.html HTTP/1.1
+HEAD /index.html HTTP/1.1
+```
 
 ### 3. Performance report
 I use the [mkr](https://github.com/wg/wrk) benchmark tool for testing the performance and run both client and server on the same device
