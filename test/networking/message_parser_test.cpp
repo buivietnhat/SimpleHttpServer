@@ -1,6 +1,6 @@
 
-#include "networking/http_server.h"
 #include "networking/http_message_define.h"
+#include "networking/http_server.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -54,7 +54,7 @@ TEST(MessageParserTest, HttpResponseBuilderTest) {
   EXPECT_EQ("Hello", body.content_);
 }
 
-TEST(MessageParserTest, HttpResponseToString) {
+TEST(MessageParserTest, HttpResponseToStringTest) {
   HttpResponseBuilder builder;
   auto http_respone = builder.SetStatusCode(HttpStatusCode::OK)
                           .SetHttpVersion(HttpVersion::HTTP_1_1)
@@ -67,8 +67,8 @@ TEST(MessageParserTest, HttpResponseToString) {
                                              "Content-Type: text/plain\r\n\r\n"
                                              "Hello";
   std::string expected_string_no_content = "HTTP/1.1 200 OK\r\n"
-                                             "Content-Length: 5\r\n"
-                                             "Content-Type: text/plain\r\n\r\n";
+                                           "Content-Length: 5\r\n"
+                                           "Content-Type: text/plain\r\n\r\n";
 
   auto string_response_with_content = http_respone.ToString(true);
   auto string_response_no_content = http_respone.ToString(false);

@@ -135,7 +135,7 @@ void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState
   auto recived_size = recv(state->fd, state->buffer, BUFFER_SIZE, 0);
   if (recived_size > 0) {// the message has came
     HttpResponse http_response;
-    bool content_included =  true;
+    bool content_included = true;
 
     try {
       auto http_request = MessageParser::ToHttpRequest(std::string(state->buffer));
@@ -148,7 +148,7 @@ void HttpServer::ConnectionManager::ProcessEpollInEvents(int epoll_fd, PeerState
       http_response.SetStatusCode(HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED);
     } catch (const std::logic_error &e) {
       http_response.SetStatusCode(HttpStatusCode::BAD_REQUEST);
-    } catch(const std::exception &e) {
+    } catch (const std::exception &e) {
       http_response.SetStatusCode(HttpStatusCode::INTERNAL_SERVER_ERROR);
     }
 
