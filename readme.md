@@ -29,7 +29,7 @@ for building all
 ```angular2html
     ./main
 ```
-  * test:
+  * test: I use [Google Test](https://github.com/google/googletest) framework for executing the test 
 ```angular2html
     ./test/test_module
     for example: ./test/message_parser_test
