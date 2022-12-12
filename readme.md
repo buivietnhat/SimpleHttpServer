@@ -39,7 +39,7 @@ for building all
 will execute all the tests
 
 ### 2. Current supported Http operations:
-For now the system only supports the simple http request with request target is an url as an absolute path, and also only supports HTTP/1.1 version, for example:
+For now the system only supports simple http requests with request target is an url as an absolute path, and also only supports HTTP/1.1 version, for example:
 ```angular2html
 GET / HTTP/1.1
 POST / HTTP/1.1
