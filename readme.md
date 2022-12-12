@@ -1,5 +1,7 @@
 ## Simple Http Server
 
+Note: Please find the documents located in the directory ```docs``` for the class diagram and the processing model of the system
+
 ### 1. Build and Run
 * Compilier: GNU gcc version 9.4.0
 * cmake: version 3.19.6
