@@ -19,11 +19,6 @@ void Socket::SetUp() {
   if (setsockopt(fd_server_, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &arg, sizeof(arg)) == -1) {
     throw std::runtime_error("failed to set socket option");
   }
-
-  //  // set the socket non-blocking mode
-  //  if (fcntl(fd_server_, F_SETFL, O_NONBLOCK | fcntl(fd_server_, F_GETFL, 0)) == -1) {
-  //    throw std::runtime_error("failed to set non-blocking mode for socket");
-  //  }
 }
 
 void Socket::Bind(const std::string &host, int port) {

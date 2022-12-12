@@ -32,13 +32,6 @@ void AbstractHttpMessage::SetBody(const Body &body) {
   body_ = body;
 }
 
-//GET / HTTP/1.1
-//Host: 0.0.0.0:8080
-//User-Agent: python-requests/2.22.0
-//Accept-Encoding: gzip, deflate
-//Accept: */*
-//Connection: keep-alive
-
 HttpRequest::HttpRequest(const std::string &raw) : raw_(raw) {
   size_t left_pos = 0, right_pos = 0;
 
